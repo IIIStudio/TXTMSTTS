@@ -18,7 +18,7 @@ main:
         - name: 同步到GitHub
           image: tencentcom/git-sync 
           settings:
-            target_url: https://github.com/MatrixBuilder/MSTTS.git
+            target_url: http://iiistudio.github.io/TXTMSTTS.git
             auth_type: https
             git_user: ${GIT_USERNAME}
             git_email: ${GIT_EMAIL} 
