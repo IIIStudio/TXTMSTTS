@@ -1,1931 +1,1399 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TXT在线听书文字转语音阅读器</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>TXT 阅读器</title>
     <style>
+        :root {
+            --bg: #ffffff;
+            --ink: #111111;
+            --gray-1: #666666;
+            --gray-2: #999999;
+            --line: #e5e5e5;
+            --accent: #E30613;
+            --accent-bg: #fdf2f3;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        html,
+        body {
+            height: 100%;
         }
 
         body {
-            background-color: #f5f7fa;
-            color: #333;
-            line-height: 1.6;
-            padding: 20px;
-            min-height: 100vh;
+            font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 40px);
+        button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: none;
+            cursor: pointer;
         }
 
-        header {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            padding: 20px 30px;
-            text-align: center;
+        button:disabled {
+            color: #c4c4c4;
+            cursor: default;
         }
 
-        header h1 {
-            font-size: 2.2rem;
-            margin-bottom: 8px;
+        select {
+            font: inherit;
+            color: inherit;
+            border: 1px solid var(--line);
+            background: #fff;
+            padding: 4px 8px;
+            border-radius: 0;
+        }
+
+        select:focus {
+            outline: 1px solid var(--ink);
+        }
+
+        /* ---------- 状态 A：导入页 ---------- */
+        #importView {
+            height: 100vh;
+            height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            cursor: pointer;
+            transition: box-shadow .2s ease, background .2s ease;
         }
 
-        header h1 i {
-            font-size: 2rem;
+        #importView.drag {
+            box-shadow: inset 0 0 0 2px var(--accent);
+            background: #fffafa;
         }
 
-        header p {
-            opacity: 0.9;
-            font-size: 1rem;
+        .import-inner {
+            padding: 0 24px;
+            pointer-events: none;
+            position: relative;
+            z-index: 1;
         }
 
-        .main-content {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
+        .import-inner h1 {
+            font-size: clamp(48px, 9vw, 112px);
+            font-weight: 700;
+            letter-spacing: -.03em;
+            line-height: 1;
         }
 
-        .sidebar {
-            width: 280px;
-            background-color: #f8fafc;
-            border-right: 1px solid #eaeef2;
-            padding: 25px;
+        .import-inner .hint {
+            margin-top: 24px;
+            font-size: clamp(18px, 2.4vw, 28px);
+            color: var(--ink);
+            transition: color .2s ease;
+        }
+
+        #importView.drag .hint {
+            color: var(--accent);
+        }
+
+        .import-inner .formats {
+            margin-top: 16px;
+            font-size: 13px;
+            letter-spacing: .15em;
+            color: var(--gray-2);
+        }
+
+        /* ---------- 状态 B：阅读页 ---------- */
+        #readerView {
+            height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
         }
 
-        .file-section {
-            margin-bottom: 30px;
-        }
-
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 15px;
+        /* 顶部工具栏：默认隐藏在上方，鼠标悬停顶部下滑出现 */
+        #toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 70;
+            background: #fff;
+            transform: translateY(-100%);
+            visibility: hidden;
+            transition: transform .25s ease, visibility .25s;
             display: flex;
             align-items: center;
-            gap: 10px;
-        }
-
-        .section-title i {
-            color: #4299e1;
-        }
-
-        .file-input-area {
-            border: 2px dashed #cbd5e0;
-            border-radius: 8px;
-            padding: 25px 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-            background-color: #fff;
-        }
-
-        .file-input-area:hover {
-            border-color: #4299e1;
-            background-color: #f0f9ff;
-        }
-
-        .file-input-area i {
-            font-size: 2.5rem;
-            color: #718096;
-            margin-bottom: 12px;
-        }
-
-        .file-input-area h3 {
-            font-size: 1.1rem;
-            color: #4a5568;
-            margin-bottom: 8px;
-        }
-
-        .file-input-area p {
-            font-size: 0.9rem;
-            color: #718096;
-        }
-
-        .file-input-area input {
-            display: none;
-        }
-
-        .current-file {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-        }
-
-        .current-file h4 {
-            font-size: 0.95rem;
-            color: #4a5568;
-            margin-bottom: 8px;
-        }
-
-        .current-file p {
-            font-size: 0.85rem;
-            color: #718096;
-            word-break: break-all;
-        }
-
-        .encoding-controls {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-        }
-
-        .encoding-controls h4 {
-            font-size: 0.95rem;
-            color: #4a5568;
-            margin-bottom: 12px;
-        }
-
-        .encoding-options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .encoding-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .encoding-option input {
-            margin: 0;
-        }
-
-        .encoding-option label {
-            font-size: 0.85rem;
-            color: #4a5568;
-            cursor: pointer;
-        }
-
-        .encoding-btn {
-            background-color: #48bb78;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 12px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        .encoding-btn:hover {
-            background-color: #38a169;
-        }
-
-        .encoding-btn:disabled {
-            background-color: #a0aec0;
-            cursor: not-allowed;
-        }
-
-        .reader-section {
-            flex: 1;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .chapters-sidebar {
-            width: 250px;
-            background-color: #f8fafc;
-            border-left: 1px solid #eaeef2;
-            padding: 25px;
-            overflow-y: auto;
-            max-height: 100%;
-        }
-
-        .chapters-section {
-            margin-bottom: 30px;
-        }
-
-        .chapter-list {
-            max-height: 100%;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            background-color: white;
-        }
-
-        .chapter-item {
-            padding: 10px 15px;
-            border-bottom: 1px solid #edf2f7;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: 0.9rem;
-        }
-
-        .chapter-item:hover {
-            background-color: #f7fafc;
-        }
-
-        .chapter-item.active {
-            background-color: #4299e1;
-            color: white;
-        }
-
-        .chapter-item:last-child {
-            border-bottom: none;
-        }
-
-        .chapter-title {
-            font-weight: 600;
-            line-height: 1.4;
-        }
-
-        .chapter-preview {
-            display: none;
-        }
-
-        .reader-controls {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 25px;
+            gap: 8px 24px;
             flex-wrap: wrap;
-            gap: 15px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eaeef2;
-            max-width: 100%;
-            overflow: hidden;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .playback-controls {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .control-btn {
-            background-color: #4299e1;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 6px rgba(66, 153, 225, 0.3);
-        }
-
-        .control-btn:hover {
-            background-color: #3182ce;
-            transform: translateY(-2px);
-        }
-
-        .control-btn:disabled {
-            background-color: #a0aec0;
-            cursor: not-allowed;
+        #toolbar.open {
             transform: none;
-            box-shadow: none;
+            visibility: visible;
         }
 
-        .control-btn i {
-            font-size: 0.95rem;
+        #fileName {
+            font-weight: 600;
+            font-size: 15px;
+            max-width: 32ch;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .control-btn span {
-            font-size: 0.85rem;
-        }
-
-        .save-load-btn {
-            background-color: #48bb78;
-            box-shadow: 0 4px 6px rgba(72, 187, 120, 0.3);
-        }
-
-        .save-load-btn:hover {
-            background-color: #38a169;
-        }
-
-        .save-load-btn:disabled {
-            background-color: #a0aec0;
-            box-shadow: none;
-        }
-
-        .speed-control {
+        #toolbar nav {
+            margin-left: auto;
             display: flex;
             align-items: center;
-            gap: 10px;
-            background-color: #f8fafc;
-            padding: 8px 15px;
-            border-radius: 50px;
-            flex-shrink: 0;
+            gap: 4px 16px;
+            flex-wrap: wrap;
         }
 
-        .speed-control label {
-            font-size: 0.9rem;
-            color: #4a5568;
-            font-weight: 500;
+        #toolbar nav button {
+            padding: 6px 2px;
+            font-size: 14px;
         }
 
-        .speed-control select {
-            border: 1px solid #cbd5e0;
-            border-radius: 4px;
-            padding: 6px 10px;
-            background-color: white;
-            color: #4a5568;
-            font-weight: 500;
-            min-width: 80px;
+        #toolbar nav button:hover:not(:disabled) {
+            color: var(--accent);
         }
 
-        .text-display {
+        #toolbar nav label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--gray-1);
+        }
+
+        #textWrap {
             flex: 1;
             overflow-y: auto;
-            padding: 25px;
-            background-color: #f8fafc;
-            border-radius: 10px;
+        }
+
+        #textDisplay {
+            max-width: 68ch;
+            margin: 0 auto;
+            padding: 64px 24px 96px;
+            font-size: 18px;
             line-height: 1.8;
-            font-size: 1.1rem;
-            color: #2d3748;
-            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
         }
 
-        .text-display p {
+        #textDisplay p {
+            padding: 6px 16px;
+            margin: 2px 0;
+            border-left: 3px solid transparent;
             cursor: pointer;
-            padding: 8px;
-            margin: 8px 0;
-            border-radius: 4px;
-            transition: all 0.2s;
+            white-space: pre-wrap;
+            word-break: break-word;
+            transition: background .15s ease, border-color .15s ease;
         }
 
-        .text-display p:hover {
-            background-color: #e6f2ff;
-            border-left: 3px solid #4299e1;
-            padding-left: 12px;
+        #textDisplay p:hover {
+            background: #f7f7f7;
         }
 
-        .text-display p.selected {
-            background-color: #dbeafe;
-            border-left: 4px solid #2563eb;
-            padding-left: 12px;
-            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+        #textDisplay p.selected {
+            background: #f2f2f2;
+            border-left-color: var(--gray-2);
+        }
+
+        #textDisplay p.playing {
+            background: var(--accent-bg);
+            border-left-color: var(--accent);
         }
 
         .highlight {
-            background-color: #ffeaa7;
-            padding: 2px 0;
-            border-radius: 3px;
-            transition: background-color 0.3s;
+            background: rgba(227, 6, 19, .18);
         }
 
-        .current-pos-indicator {
-            position: sticky;
-            bottom: 20px;
+        #statusBar {
+            border-top: 1px solid var(--line);
+            padding: 10px 24px;
+            font-size: 13px;
+            color: var(--gray-1);
+            min-height: 41px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #statusBar .pager {
+            margin-left: auto;
+            display: flex;
+            gap: 4px 16px;
+        }
+
+        #statusBar .pager button {
+            font-size: 13px;
+            color: var(--gray-1);
+            padding: 4px 2px;
+        }
+
+        #statusBar .pager button:hover:not(:disabled) {
+            color: var(--accent);
+        }
+
+        /* ---------- 章节浮层（右边缘滑出） ---------- */
+        #chapterPanel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 320px;
+            max-width: 85vw;
+            background: #fff;
+            border-left: 1px solid var(--line);
+            transform: translateX(100%);
+            visibility: hidden;
+            transition: transform .25s ease, visibility .25s;
+            display: flex;
+            flex-direction: column;
+            z-index: 70;
+        }
+
+        #chapterPanel.open {
+            transform: none;
+            visibility: visible;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid var(--line);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        #chapterList {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chapter-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            line-height: 1.5;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .chapter-item:hover {
+            background: #f7f7f7;
+        }
+
+        .chapter-item.active {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .panel-empty {
+            padding: 24px 16px;
+            font-size: 13px;
+            color: var(--gray-2);
+        }
+
+        /* ---------- 专注模式 ---------- */
+        #focusMode {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .25s ease, visibility .25s;
+        }
+
+        #focusMode.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #focusText {
+            max-width: 30em;
+            padding: 0 32px;
+            font-size: clamp(20px, 3.2vw, 32px);
+            line-height: 1.9;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        #focusHint {
+            position: fixed;
+            bottom: 24px;
             left: 0;
             right: 0;
             text-align: center;
-            background-color: rgba(66, 153, 225, 0.9);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            margin-top: 15px;
-            display: none;
+            font-size: 13px;
+            color: var(--gray-2);
+            letter-spacing: .05em;
         }
 
-        .current-pos-indicator.show {
-            display: block;
+        /* ---------- 轻提示 ---------- */
+        #toast {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 50;
+            background: var(--ink);
+            color: #fff;
+            font-size: 14px;
+            padding: 10px 16px;
+            max-width: 70vw;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity .2s ease, transform .2s ease;
+            pointer-events: none;
         }
 
-
-
-        .footer-info {
-            text-align: center;
-            padding: 20px;
-            color: #718096;
-            font-size: 0.9rem;
-            border-top: 1px solid #eaeef2;
-            margin-top: 20px;
+        #toast.show {
+            opacity: 1;
+            transform: none;
         }
 
-        @media (max-width: 992px) {
-            .main-content {
-                flex-direction: column;
+        #toast.error {
+            background: var(--accent);
+        }
+
+        @media (max-width: 640px) {
+            #toolbar {
+                padding: 10px 16px;
+                gap: 6px 12px;
             }
 
-            .sidebar {
-                width: 100%;
-                border-right: none;
-                border-bottom: 1px solid #eaeef2;
+            #fileName {
+                max-width: 100%;
+                flex-basis: 100%;
             }
 
-            .reader-controls {
-                justify-content: center;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .container {
-                height: auto;
-                min-height: calc(100vh - 40px);
+            #toolbar nav {
+                margin-left: 0;
             }
 
-            .playback-controls {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            .control-btn {
-                width: 100%;
-            }
-
-            .speed-control {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #718096;
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #cbd5e0;
-        }
-
-        .voice-selector {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background-color: #f8fafc;
-            padding: 8px 15px;
-            border-radius: 50px;
-            flex-shrink: 0;
-        }
-
-        .voice-selector select {
-            border: 1px solid #cbd5e0;
-            border-radius: 4px;
-            padding: 6px 10px;
-            background-color: white;
-            color: #4a5568;
-            font-weight: 500;
-            min-width: 120px;
-            max-width: 200px;
-        }
-
-        .settings-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            max-width: 100%;
-        }
-
-        .encoding-status {
-            font-size: 0.8rem;
-            color: #718096;
-            margin-top: 8px;
-            font-style: italic;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-
-            to {
-                transform: translateX(100%);
-                opacity: 0;
+            #textDisplay {
+                padding: 40px 16px 72px;
+                font-size: 16px;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-book-reader"></i> TXT在线阅读器</h1>
-            <p>智能编码检测，解决中文乱码问题 | 文字转语音与自动滚动阅读</p>
+
+    <!-- 状态 A：全屏导入 -->
+    <section id="importView">
+        <div class="import-inner">
+            <h1>TXT 阅读器</h1>
+            <p class="hint">拖入或点击导入 TXT</p>
+            <p class="formats">.TXT&ensp;.MD&ensp;.JSON</p>
+        </div>
+        <input type="file" id="fileInput" accept=".txt,.md,.json,.html,.css,.js,.xml,.csv" hidden>
+    </section>
+
+    <!-- 状态 B：阅读页 -->
+    <section id="readerView" hidden>
+        <header id="toolbar">
+            <span id="fileName"></span>
+            <nav>
+                <button id="playBtn">播放</button>
+                <button id="stopBtn" disabled>停止</button>
+                <label>语音
+                    <select id="voiceSelect"></select>
+                </label>
+                <label>语速
+                    <select id="speedSelect">
+                        <option value="0.5">0.5x</option>
+                        <option value="0.8">0.8x</option>
+                        <option value="1">1x</option>
+                        <option value="1.2">1.2x</option>
+                        <option value="1.5" selected>1.5x</option>
+                        <option value="2">2x</option>
+                        <option value="2.5">2.5x</option>
+                        <option value="3">3x</option>
+                    </select>
+                </label>
+                <button id="saveBtn">存档</button>
+                <button id="loadBtn">读档</button>
+                <button id="reimportBtn">重新导入</button>
+            </nav>
         </header>
-
-        <div class="main-content">
-            <div class="sidebar">
-                <div class="file-section">
-                    <div class="section-title">
-                        <i class="fas fa-file-import"></i>
-                        <span>导入TXT文件</span>
-                    </div>
-                    <div class="file-input-area" id="fileInputArea">
-                        <i class="fas fa-file-alt"></i>
-                        <h3>点击或拖拽TXT文件到此处</h3>
-                        <p>支持任何纯文本格式文件(.txt, .md, .json等)</p>
-                        <input type="file" id="fileInput" accept=".txt,.md,.json,.html,.css,.js,.xml,.csv">
-                    </div>
-
-                    <div class="current-file">
-                        <h4>当前文件:</h4>
-                        <p id="currentFileName">尚未选择文件</p>
-                        <p id="fileInfo">文件大小: 0 KB | 字符数: 0</p>
-                    </div>
-                </div>
-
-                <div class="file-section">
-                    <div class="section-title">
-                        <i class="fas fa-file-code"></i>
-                        <span>编码设置</span>
-                    </div>
-                    <div class="encoding-controls">
-                        <h4>当前编码: <span id="currentEncoding">自动检测</span></h4>
-                        <div class="encoding-options">
-                            <div class="encoding-option">
-                                <input type="radio" id="autoEncode" name="encoding" value="auto" checked>
-                                <label for="autoEncode">自动检测编码</label>
-                            </div>
-                            <div class="encoding-option">
-                                <input type="radio" id="utf8Encode" name="encoding" value="UTF-8">
-                                <label for="utf8Encode">UTF-8 (推荐)</label>
-                            </div>
-                            <div class="encoding-option">
-                                <input type="radio" id="gbkEncode" name="encoding" value="GBK">
-                                <label for="gbkEncode">GBK / GB2312 (简体中文)</label>
-                            </div>
-                            <div class="encoding-option">
-                                <input type="radio" id="big5Encode" name="encoding" value="Big5">
-                                <label for="big5Encode">Big5 (繁体中文)</label>
-                            </div>
-                            <div class="encoding-option">
-                                <input type="radio" id="isoEncode" name="encoding" value="ISO-8859-1">
-                                <label for="isoEncode">ISO-8859-1 (西欧)</label>
-                            </div>
-                        </div>
-                        <button id="reloadBtn" class="encoding-btn" disabled>使用新编码重新加载</button>
-                        <div id="encodingStatus" class="encoding-status"></div>
-                    </div>
-                </div>
-
-                <div class="file-section">
-                    <div class="section-title">
-                        <i class="fas fa-info-circle"></i>
-                        <span>使用说明</span>
-                    </div>
-                    <div class="current-file">
-                        <p><strong>解决乱码问题:</strong></p>
-                        <p>1. 如果文本显示乱码，尝试在左侧选择不同的编码</p>
-                        <p>2. 中文文件通常使用UTF-8或GBK编码</p>
-                        <p>3. 点击"使用新编码重新加载"按钮应用设置</p>
-                        <p><strong>朗读功能:</strong></p>
-                        <p>4. 正确显示文本后，点击"开始朗读"按钮</p>
-                        <p>5. 播放时页面会自动滚动并高亮当前朗读内容</p>
-                    </div>
-                </div>
+        <main id="textWrap">
+            <div id="textDisplay"></div>
+        </main>
+        <footer id="statusBar">
+            <span id="statusText"></span>
+            <div class="pager">
+                <button id="prevBtn">← 上一章</button>
+                <button id="nextBtn">下一章 →</button>
             </div>
+        </footer>
 
-            <div class="reader-section">
-                <div class="reader-controls">
-                    <div class="playback-controls">
-                        <button id="playBtn" class="control-btn" disabled>
-                            <i class="fas fa-play"></i>
-                            <span>开始朗读</span>
-                        </button>
-
-                        <button id="stopBtn" class="control-btn" disabled>
-                            <i class="fas fa-stop"></i>
-                            <span>停止</span>
-                        </button>
-                        <button id="saveBtn" class="control-btn save-load-btn" disabled>
-                            <i class="fas fa-save"></i>
-                            <span>存档</span>
-                        </button>
-                        <button id="loadBtn" class="control-btn save-load-btn" disabled>
-                            <i class="fas fa-upload"></i>
-                            <span>读档</span>
-                        </button>
-                    </div>
-
-                    <div class="settings-row">
-                        <div class="voice-selector">
-                            <label for="voiceSelect">语音:</label>
-                            <select id="voiceSelect"></select>
-                        </div>
-
-                        <div class="speed-control">
-                            <label for="speedSelect">语速:</label>
-                            <select id="speedSelect">
-                                <option value="0.5">0.5x</option>
-                                <option value="0.8">0.8x</option>
-                                <option value="1" selected>正常</option>
-                                <option value="1.2">1.2x</option>
-                                <option value="1.5">1.5x</option>
-                                <option value="2">2x</option>
-                                <option value="2.5">2.5x</option>
-                                <option value="3">3x</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-display" id="textDisplay">
-                    <div class="empty-state">
-                        <i class="fas fa-book-open"></i>
-                        <h3>尚未加载文件</h3>
-                        <p>请从左侧导入TXT文件开始阅读</p>
-                        <p style="font-size: 0.9rem; margin-top: 15px; color: #718096;">
-                            如果文本显示乱码，请尝试在左侧选择不同的编码格式重新加载
-                        </p>
-                    </div>
-                </div>
-
-                <div class="current-pos-indicator" id="posIndicator">
-                    正在朗读: <span id="currentPosText">第 0 句 / 共 0 句</span>
-                </div>
-            </div>
-
-            <div class="chapters-sidebar" id="chaptersSidebar">
-                <div class="chapters-section">
-                    <div class="section-title">
-                        <i class="fas fa-list"></i>
-                        <span>章节列表</span>
-                    </div>
-                    <div class="chapter-list" id="chapterList">
-                        <div class="empty-state">
-                            <i class="fas fa-bookmark"></i>
-                            <p>章节列表将在此显示</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <!-- 专注模式：只显示当前朗读的句子 -->
+        <div id="focusMode">
+            <div id="focusText"></div>
+            <div id="focusHint">←/→ 上一句 / 下一句&ensp;·&ensp;↑/↓ 上一章 / 下一章&ensp;·&ensp;空格 播放 / 暂停&ensp;·&ensp;Esc 退出</div>
         </div>
+    </section>
 
-        <div class="footer-info">
-            <p>本阅读器支持多种编码格式，解决中文TXT文件乱码问题 | 使用浏览器Web Speech API实现文字转语音功能</p>
-            <p>
-                <a href="http://github.com/IIIStudio/TXTMSTTS" target="_blank"
-                    style="color: #718096; text-decoration: none;">GitHub</a> |
-                <a href="https://cnb.cool/IIIStudio/HTML/MSTTS" target="_blank"
-                    style="color: #718096; text-decoration: none;">CNB</a> |
-                <a href="http://iiistudio.github.io/TXTMSTTS/" target="_blank"
-                    style="color: #718096; text-decoration: none;">MSTTS</a>
-            </p>
-        </div>
-    </div>
+    <!-- 章节浮层 -->
+    <aside id="chapterPanel">
+        <div class="panel-head">章节</div>
+        <div id="chapterList"></div>
+    </aside>
+
+    <div id="toast"></div>
 
     <script>
-        // 全局变量
+        // 全局状态
+        // units：句级单元（与显示段落解耦）
+        // { pIdx, start, end, text, global }
+        // pIdx       所属显示段落索引
+        // start/end  在段落文本内的偏移（用于 Range 高亮）
+        // text       朗读文本
+        // global     在全文中的偏移（用于章节定位）
+        let units = [];
+        let displayParagraphs = [];
         let currentFileContent = '';
-        let sentences = [];
-        let currentSentenceIndex = 0;
-        let speechSynthesis = window.speechSynthesis;
-        let utterance = null;
+        let currentUnitIndex = 0;
         let isPlaying = false;
         let voices = [];
-        let autoScrollInterval = null;
         let currentFile = null;
-        let currentEncoding = 'auto';
-        let userSelectedPosition = false; // 标记用户是否手动选择了位置
-        let chapters = []; // 存储章节信息
+        let userSelectedPosition = false;
+        let chapters = [];
 
-        // DOM元素
+        // 分块朗读：把连续多句合并为一个 utterance（块）。
+        // 浏览器对每个 utterance 都是开始播放时才合成（在线语音是网络请求），
+        // 逐句播放必然有句间延迟；合并成块后，间隙从「每句一次」降为「每块一次」。
+        // 块内通过 onboundary 的 charIndex 反推当前句，保持逐句高亮与滚动。
+        const CHUNK_MAX = 600;   // 单块最大字符数（约 1–2 分钟音频）
+        const QUEUE_AHEAD = 1;   // 预排队的块数
+        const CPS = 4.2;         // 无 boundary 事件时的播放速度估算（字/秒，1x 基准）
+
+        let nextChunkFrom = 0;   // 下一个待排队的块起始单元索引
+        let pendingCount = 0;    // 已排队未完成的 utterance 数
+        let estimateTimer = null;
+        let sentenceMode = false; // 分块合成失败时自动降级为逐句播放（保证有声音）
+
+        const synth = window.speechSynthesis;
+
+        // DOM
+        const importView = document.getElementById('importView');
+        const readerView = document.getElementById('readerView');
         const fileInput = document.getElementById('fileInput');
-        const fileInputArea = document.getElementById('fileInputArea');
-        const currentFileName = document.getElementById('currentFileName');
-        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const textWrap = document.getElementById('textWrap');
         const textDisplay = document.getElementById('textDisplay');
         const playBtn = document.getElementById('playBtn');
         const stopBtn = document.getElementById('stopBtn');
         const saveBtn = document.getElementById('saveBtn');
         const loadBtn = document.getElementById('loadBtn');
+        const reimportBtn = document.getElementById('reimportBtn');
+        const chapterPanel = document.getElementById('chapterPanel');
+        const toolbar = document.getElementById('toolbar');
+        const chapterList = document.getElementById('chapterList');
         const speedSelect = document.getElementById('speedSelect');
         const voiceSelect = document.getElementById('voiceSelect');
-        const posIndicator = document.getElementById('posIndicator');
-        const currentPosText = document.getElementById('currentPosText');
-        const reloadBtn = document.getElementById('reloadBtn');
-        const currentEncodingDisplay = document.getElementById('currentEncoding');
-        const encodingStatus = document.getElementById('encodingStatus');
-        const encodingRadios = document.querySelectorAll('input[name="encoding"]');
-        const chapterList = document.getElementById('chapterList');
+        const statusText = document.getElementById('statusText');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const toastEl = document.getElementById('toast');
+        const focusMode = document.getElementById('focusMode');
+        const focusText = document.getElementById('focusText');
 
-        // 编码映射表
-        const encodings = {
-            'UTF-8': 'utf-8',
-            'GBK': 'gbk',
-            'Big5': 'big5',
-            'ISO-8859-1': 'iso-8859-1'
-        };
+        // ---------- 轻提示 ----------
+        let toastTimer = null;
+        function toast(msg, isError = false) {
+            toastEl.textContent = msg;
+            toastEl.classList.toggle('error', isError);
+            toastEl.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+        }
 
-        // 初始化语音列表
+        // ---------- 语音列表 ----------
         function loadVoices() {
-            voices = speechSynthesis.getVoices();
+            voices = synth.getVoices();
             voiceSelect.innerHTML = '';
 
-            // 过滤中文和英文语音
-            const chineseVoices = voices.filter(voice => voice.lang.startsWith('zh'));
-            const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
-            const otherVoices = voices.filter(voice => !voice.lang.startsWith('zh') && !voice.lang.startsWith('en'));
+            const groups = [
+                ['中文语音', voices.filter(v => v.lang.startsWith('zh'))],
+                ['英语语音', voices.filter(v => v.lang.startsWith('en'))],
+                ['其他语音', voices.filter(v => !v.lang.startsWith('zh') && !v.lang.startsWith('en'))]
+            ];
 
-            // 添加中文语音选项
-            if (chineseVoices.length > 0) {
-                const chineseGroup = document.createElement('optgroup');
-                chineseGroup.label = '中文语音';
-                chineseVoices.forEach(voice => {
+            groups.forEach(([label, list]) => {
+                if (!list.length) return;
+                const group = document.createElement('optgroup');
+                group.label = label;
+                list.forEach(voice => {
                     const option = document.createElement('option');
                     option.value = voice.voiceURI;
                     option.textContent = `${voice.name} (${voice.lang})`;
-                    chineseGroup.appendChild(option);
+                    group.appendChild(option);
                 });
-                voiceSelect.appendChild(chineseGroup);
-            }
+                voiceSelect.appendChild(group);
+            });
 
-            // 添加英文语音选项
-            if (englishVoices.length > 0) {
-                const englishGroup = document.createElement('optgroup');
-                englishGroup.label = '英语语音';
-                englishVoices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.value = voice.voiceURI;
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    englishGroup.appendChild(option);
-                });
-                voiceSelect.appendChild(englishGroup);
-            }
-
-            // 添加其他语音选项
-            if (otherVoices.length > 0) {
-                const otherGroup = document.createElement('optgroup');
-                otherGroup.label = '其他语音';
-                otherVoices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.value = voice.voiceURI;
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    otherGroup.appendChild(option);
-                });
-                voiceSelect.appendChild(otherGroup);
-            }
-
-            // 尝试恢复之前选择的语音
             const savedVoice = localStorage.getItem('selectedVoice');
-            if (savedVoice && voices.some(voice => voice.voiceURI === savedVoice)) {
+            if (savedVoice && voices.some(v => v.voiceURI === savedVoice)) {
                 voiceSelect.value = savedVoice;
             } else {
-                // 默认选择 Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland) (zh-CN)
-                const xiaoxiaoVoice = voices.find(voice =>
-                    voice.name.includes('Microsoft Xiaoxiao Online') ||
-                    voice.name.includes('Xiaoxiao') ||
-                    voice.voiceURI.includes('Microsoft Xiaoxiao Online')
+                const xiaoxiao = voices.find(v =>
+                    v.name.includes('Xiaoxiao') || v.voiceURI.includes('Xiaoxiao')
                 );
-
-                if (xiaoxiaoVoice) {
-                    voiceSelect.value = xiaoxiaoVoice.voiceURI;
-                } else if (chineseVoices.length > 0) {
-                    // 如果没有找到Xiaoxiao，选择第一个中文语音
-                    voiceSelect.value = chineseVoices[0].voiceURI;
-                } else if (voices.length > 0) {
-                    voiceSelect.value = voices[0].voiceURI;
-                }
+                const chinese = voices.filter(v => v.lang.startsWith('zh'));
+                if (xiaoxiao) voiceSelect.value = xiaoxiao.voiceURI;
+                else if (chinese.length) voiceSelect.value = chinese[0].voiceURI;
+                else if (voices.length) voiceSelect.value = voices[0].voiceURI;
             }
         }
 
-        // 语音列表加载
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadVoices;
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
         }
 
-        // 文件拖放功能
-        fileInputArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileInputArea.style.borderColor = '#4299e1';
-            fileInputArea.style.backgroundColor = '#f0f9ff';
+        // ---------- 导入 ----------
+        importView.addEventListener('click', () => fileInput.click());
+
+        ['dragenter', 'dragover'].forEach(ev =>
+            importView.addEventListener(ev, e => {
+                e.preventDefault();
+                importView.classList.add('drag');
+            })
+        );
+
+        ['dragleave', 'drop'].forEach(ev =>
+            importView.addEventListener(ev, e => {
+                e.preventDefault();
+                importView.classList.remove('drag');
+            })
+        );
+
+        importView.addEventListener('drop', e => {
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
         });
 
-        fileInputArea.addEventListener('dragleave', () => {
-            fileInputArea.style.borderColor = '#cbd5e0';
-            fileInputArea.style.backgroundColor = '#fff';
+        // 阻止浏览器默认拖放行为（避免文件被直接打开）
+        window.addEventListener('dragover', e => e.preventDefault());
+        window.addEventListener('drop', e => e.preventDefault());
+
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
         });
 
-        fileInputArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileInputArea.style.borderColor = '#cbd5e0';
-            fileInputArea.style.backgroundColor = '#fff';
+        function isTextFile(file) {
+            if (file.type.startsWith('text/')) return true;
+            return /\.(txt|md|json|html|css|js|xml|csv|log)$/i.test(file.name);
+        }
 
-            if (e.dataTransfer.files.length) {
-                const file = e.dataTransfer.files[0];
-                if (file.type === 'text/plain' || file.name.endsWith('.txt') ||
-                    file.name.endsWith('.md') || file.name.endsWith('.json')) {
-                    readFile(file);
-                } else {
-                    alert('请选择TXT文件或其他文本文件');
-                }
+        function handleFile(file) {
+            if (!isTextFile(file)) {
+                toast('请导入纯文本文件（.txt / .md / .json 等）', true);
+                return;
             }
-        });
-
-        // 点击文件区域触发文件选择
-        fileInputArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        // 文件选择变化
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                readFile(e.target.files[0]);
-            }
-        });
-
-        // 读取文件内容
-        function readFile(file, encoding = 'auto') {
-            currentFile = file;
-            currentFileName.textContent = file.name;
-
             const reader = new FileReader();
-
-            reader.onload = function (e) {
-                let content = e.target.result;
-
-                // 尝试检测编码
-                if (encoding === 'auto') {
-                    const detectedEncoding = detectEncoding(content, file);
-                    currentEncoding = detectedEncoding;
-                    currentEncodingDisplay.textContent = detectedEncoding;
-
-                    // 如果检测到的编码不是UTF-8，尝试转换
-                    if (detectedEncoding !== 'UTF-8' && detectedEncoding !== '自动检测') {
-                        content = convertEncoding(content, detectedEncoding);
-                    }
-                } else {
-                    // 使用指定的编码
-                    currentEncoding = encoding;
-                    currentEncodingDisplay.textContent = encoding;
-
-                    if (encoding !== 'UTF-8') {
-                        content = convertEncoding(content, encoding);
-                    }
-                }
-
-                currentFileContent = content;
-                fileInfo.textContent = `文件大小: ${(file.size / 1024).toFixed(2)} KB | 字符数: ${currentFileContent.length} | 编码: ${currentEncoding}`;
-
-                // 处理文本内容
-                processTextContent(currentFileContent);
-
-                // 启用播放按钮和重新加载按钮
-                playBtn.disabled = false;
-                stopBtn.disabled = true;
-                reloadBtn.disabled = false;
-                saveBtn.disabled = false;
-                loadBtn.disabled = false;
-
-                // 显示文本内容
-                displayTextContent(currentFileContent);
-
-                // 更新编码状态
-                encodingStatus.textContent = `使用 ${currentEncoding} 编码加载成功`;
-                encodingStatus.style.color = '#48bb78';
-
-                // 设置对应的编码单选按钮
-                setEncodingRadio(currentEncoding);
+            reader.onload = e => {
+                currentFileContent = decodeBuffer(e.target.result);
+                currentFile = file;
+                enterReader(file.name);
             };
-
-            reader.onerror = function () {
-                encodingStatus.textContent = '文件读取失败，请尝试其他编码';
-                encodingStatus.style.color = '#f56565';
-            };
-
-            // 读取文件为二进制数组，以便后续编码检测
+            reader.onerror = () => toast('文件读取失败', true);
             reader.readAsArrayBuffer(file);
         }
 
-        // 简单的编码检测函数
-        function detectEncoding(buffer, file) {
-            // 将ArrayBuffer转换为Uint8Array
-            const uint8Array = new Uint8Array(buffer);
+        // 后台静默编码检测：BOM → UTF-8 严格解码 → GBK 回退
+        function decodeBuffer(buffer) {
+            const bytes = new Uint8Array(buffer);
 
-            // 检测UTF-8 BOM (EF BB BF)
-            if (uint8Array.length >= 3 &&
-                uint8Array[0] === 0xEF &&
-                uint8Array[1] === 0xBB &&
-                uint8Array[2] === 0xBF) {
-                return 'UTF-8';
+            if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+                return new TextDecoder('utf-8').decode(bytes);
             }
-
-            // 检测UTF-16 LE BOM (FF FE)
-            if (uint8Array.length >= 2 &&
-                uint8Array[0] === 0xFF &&
-                uint8Array[1] === 0xFE) {
-                return 'UTF-16LE';
+            if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+                return new TextDecoder('utf-16le').decode(bytes);
             }
-
-            // 检测UTF-16 BE BOM (FE FF)
-            if (uint8Array.length >= 2 &&
-                uint8Array[0] === 0xFE &&
-                uint8Array[1] === 0xFF) {
-                return 'UTF-16BE';
+            if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+                return new TextDecoder('utf-16be').decode(bytes);
             }
-
-            // 尝试使用TextDecoder检测
             try {
-                // 尝试UTF-8解码
-                const utf8Decoder = new TextDecoder('utf-8');
-                const utf8Text = utf8Decoder.decode(uint8Array);
-
-                // 检查是否有乱码字符（常见的乱码字符）
-                const garbagePattern = /[â€œâ€�â„¢â€"�â€¦Â®Ã©Ã¨Ã Ã´ÃªÃ®Ã»Ã§Ã¯Ã¼Ã¶Ã¤ÃŸ]/;
-                if (!garbagePattern.test(utf8Text)) {
-                    return 'UTF-8';
+                return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+            } catch (_) {
+                try {
+                    return new TextDecoder('gb18030').decode(bytes);
+                } catch (__) {
+                    return new TextDecoder('utf-8').decode(bytes);
                 }
-            } catch (e) {
-                // UTF-8解码失败
             }
-
-            // 基于文件名和常见中文编码猜测
-            const fileName = file.name.toLowerCase();
-
-            // 如果是中文文件，优先尝试GBK
-            if (fileName.includes('chinese') || fileName.includes('cn') ||
-                fileName.includes('zh') || fileName.includes('gb')) {
-                return 'GBK';
-            }
-
-            // 如果是繁体中文文件
-            if (fileName.includes('big5') || fileName.includes('tw') ||
-                fileName.includes('hk') || fileName.includes('traditional')) {
-                return 'Big5';
-            }
-
-            // 默认返回GBK（大多数中文TXT文件使用GBK编码）
-            return 'GBK';
         }
 
-        // 编码转换函数
-        function convertEncoding(buffer, fromEncoding) {
-            try {
-                const uint8Array = new Uint8Array(buffer);
+        function enterReader(name) {
+            fileName.textContent = name;
+            processTextContent(currentFileContent);
+            displayTextContent();
 
-                // 创建TextDecoder
-                let decoder;
-                if (fromEncoding === 'GBK') {
-                    // 尝试使用gbk解码，如果浏览器不支持则使用gb18030
-                    try {
-                        decoder = new TextDecoder('gbk');
-                    } catch (e) {
-                        decoder = new TextDecoder('gb18030');
-                    }
-                } else if (fromEncoding === 'Big5') {
-                    decoder = new TextDecoder('big5');
-                } else if (fromEncoding === 'ISO-8859-1') {
-                    decoder = new TextDecoder('iso-8859-1');
-                } else if (fromEncoding === 'UTF-16LE') {
-                    decoder = new TextDecoder('utf-16le');
-                } else if (fromEncoding === 'UTF-16BE') {
-                    decoder = new TextDecoder('utf-16be');
+            importView.hidden = true;
+            readerView.hidden = false;
+
+            currentUnitIndex = 0;
+            userSelectedPosition = false;
+            isPlaying = false;
+            sentenceMode = false;
+            playBtn.disabled = false;
+            stopBtn.disabled = true;
+            textWrap.scrollTop = 0;
+
+            updateStatus();
+            toast(`已加载：${name}`);
+
+            // 导入即自动播放并进入专注模式
+            startReading();
+            toggleFocusMode(true);
+        }
+
+        // ---------- 文本切分 ----------
+        // 把单个显示段落切为句级单元，保留段落内精确偏移
+        function splitIntoUnits(pText) {
+            const segs = [];
+            let start = 0;
+            const re = /[。！？；!?;]|\n+/g;
+            let m;
+            while ((m = re.exec(pText)) !== null) {
+                const end = m.index + m[0].length;
+                if (pText.slice(start, end).trim()) segs.push({ start, end });
+                start = end;
+            }
+            if (start < pText.length && pText.slice(start).trim()) {
+                segs.push({ start, end: pText.length });
+            }
+            if (!segs.length) return [];
+
+            // 过短的碎片并入上一句
+            const merged = [];
+            for (const s of segs) {
+                if (merged.length && pText.slice(s.start, s.end).trim().length < 12) {
+                    merged[merged.length - 1].end = s.end;
                 } else {
-                    // 默认使用UTF-8
-                    decoder = new TextDecoder('utf-8');
-                }
-
-                return decoder.decode(uint8Array);
-            } catch (error) {
-                console.error('编码转换失败:', error);
-                encodingStatus.textContent = `编码转换失败: ${error.message}`;
-                encodingStatus.style.color = '#f56565';
-
-                // 尝试使用纯JavaScript的编码转换（简单的GBK到UTF-8映射）
-                if (fromEncoding === 'GBK') {
-                    return trySimpleGBKConversion(buffer);
-                }
-
-                return '编码转换失败，请尝试其他编码格式';
-            }
-        }
-
-        // 简单的GBK到UTF-8转换（处理常见中文字符）
-        function trySimpleGBKConversion(buffer) {
-            const uint8Array = new Uint8Array(buffer);
-            let result = '';
-
-            // 常见GBK字符映射（这里只包含一部分，实际使用中需要完整的映射表）
-            const gbkToUnicode = {
-                '0xA1A1': ' ', '0xA1A2': '、', '0xA1A3': '。', '0xA1A4': '·',
-                // 更多映射可以在这里添加
-            };
-
-            // 简单转换：将每个字节转换为字符
-            for (let i = 0; i < uint8Array.length; i++) {
-                const byte = uint8Array[i];
-                // 如果字节大于127，可能是双字节GBK字符
-                if (byte > 127 && i + 1 < uint8Array.length) {
-                    const nextByte = uint8Array[i + 1];
-                    const gbkCode = '0x' + byte.toString(16).toUpperCase() + nextByte.toString(16).toUpperCase();
-
-                    if (gbkToUnicode[gbkCode]) {
-                        result += gbkToUnicode[gbkCode];
-                    } else {
-                        // 无法识别，使用占位符
-                        result += '�';
-                    }
-                    i++; // 跳过下一个字节
-                } else if (byte < 32 && byte !== 10 && byte !== 13 && byte !== 9) {
-                    // 控制字符（除了换行、回车、制表符）
-                    continue;
-                } else {
-                    // ASCII字符
-                    result += String.fromCharCode(byte);
+                    merged.push({ start: s.start, end: s.end });
                 }
             }
 
-            return result;
+            // 过长句按逗号或硬切分
+            const MAX_LEN = 200;
+            const out = [];
+            for (const s of merged) {
+                let a = s.start;
+                while (s.end - a > MAX_LEN) {
+                    const win = pText.slice(a, a + MAX_LEN);
+                    let cut = Math.max(
+                        win.lastIndexOf('，'), win.lastIndexOf('、'),
+                        win.lastIndexOf('：'), win.lastIndexOf(':'),
+                        win.lastIndexOf(','), win.lastIndexOf(' ')
+                    );
+                    if (cut < MAX_LEN / 2) cut = MAX_LEN; else cut += 1;
+                    out.push({ start: a, end: a + cut });
+                    a += cut;
+                }
+                if (s.end > a && pText.slice(a, s.end).trim()) {
+                    out.push({ start: a, end: s.end });
+                }
+            }
+            return out;
         }
 
-        // 设置编码单选按钮
-        function setEncodingRadio(encoding) {
-            encodingRadios.forEach(radio => {
-                if (radio.value === encoding.toLowerCase()) {
-                    radio.checked = true;
-                } else if (encoding === '自动检测' && radio.value === 'auto') {
-                    radio.checked = true;
-                }
-            });
-        }
-
-        // 重新加载文件使用新编码
-        reloadBtn.addEventListener('click', () => {
-            if (!currentFile) return;
-
-            // 获取选中的编码
-            let selectedEncoding = 'auto';
-            encodingRadios.forEach(radio => {
-                if (radio.checked) {
-                    selectedEncoding = radio.value === 'auto' ? 'auto' : radio.value.toUpperCase();
-                }
-            });
-
-            encodingStatus.textContent = `正在使用 ${selectedEncoding} 编码重新加载...`;
-            encodingStatus.style.color = '#4299e1';
-
-            // 重新读取文件
-            readFile(currentFile, selectedEncoding);
-        });
-
-        // 处理文本内容,分割成句子和章节
         function processTextContent(text) {
-            // 统一使用段落分割方式,与displayTextContent保持一致
-            // 这样可以确保句子索引和段落显示完全对应
-            const paragraphs = text.split(/\n\s*\n/);
+            displayParagraphs = text.split(/\n\s*\n/).filter(p => p.trim());
+            units = [];
 
-            // 过滤空段落
-            sentences = paragraphs.filter(s => s.trim().length > 0);
+            let searchFrom = 0;
+            displayParagraphs.forEach((pText, pIdx) => {
+                let g = text.indexOf(pText, searchFrom);
+                if (g === -1) g = searchFrom;
+                splitIntoUnits(pText).forEach(s => {
+                    units.push({
+                        pIdx,
+                        start: s.start,
+                        end: s.end,
+                        text: pText.slice(s.start, s.end),
+                        global: g + s.start
+                    });
+                });
+                searchFrom = g + pText.length;
+            });
 
-            // 如果只有一个段落或没有段落,按换行符分割
-            if (sentences.length <= 1) {
-                sentences = text.split(/\n+/).filter(s => s.trim().length > 0);
-            }
-
-            // 如果还是太少,尝试按标点符号分割
-            if (sentences.length <= 1) {
-                sentences = text.split(/(?<=[。！？；.!?;])\s*/);
-                sentences = sentences.filter(s => s.trim().length > 0);
-            }
-
-            // 检测章节
             detectChapters(text);
-
-            console.log(`文本已分割为 ${sentences.length} 个段落/句子`);
         }
 
-        // 检测章节
         function detectChapters(text) {
             const chapterRegex = /^第[一二三四五六七八九十零〇百千万\d\s]{1,10}[章节卷集部篇回].+$/gm;
             chapters = [];
             let match;
-
             while ((match = chapterRegex.exec(text)) !== null) {
-                const chapterTitle = match[0].trim();
-                const startIndex = match.index;
-                const endIndex = chapterRegex.lastIndex;
-
                 chapters.push({
-                    title: chapterTitle,
-                    startIndex: startIndex,
-                    endIndex: endIndex
+                    title: match[0].trim(),
+                    startIndex: match.index
                 });
             }
-
-            // 显示章节列表
-            displayChapterList(chapters);
+            displayChapterList();
         }
 
-        // 显示章节列表
-        function displayChapterList(chapters) {
+        function displayChapterList() {
             chapterList.innerHTML = '';
 
-            if (chapters.length === 0) {
-                chapterList.innerHTML = '<div class="empty-state"><i class="fas fa-bookmark"></i><p>未检测到章节</p></div>';
+            if (!chapters.length) {
+                chapterList.innerHTML = '<div class="panel-empty">未检测到章节</div>';
                 return;
             }
 
-            chapters.forEach((chapter, index) => {
-                const chapterItem = document.createElement('div');
-                chapterItem.className = 'chapter-item';
-                chapterItem.innerHTML = `
-                    <div class="chapter-title">${chapter.title}</div>
-                `;
-
-                chapterItem.addEventListener('click', () => {
-                    // 跳转到章节位置
-                    scrollToChapter(chapter.startIndex);
-                    // 设置当前章节为活跃状态
-                    document.querySelectorAll('.chapter-item').forEach(item => item.classList.remove('active'));
-                    chapterItem.classList.add('active');
+            chapters.forEach(chapter => {
+                const item = document.createElement('div');
+                item.className = 'chapter-item';
+                item.textContent = chapter.title;
+                item.addEventListener('click', () => {
+                    jumpToGlobalOffset(chapter.startIndex);
+                    chapterList.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    chapterPanel.classList.remove('open');
+                    toggleFocusMode(true); // 点击章节后回到专注视图
+                    setTimeout(updateFocusText, 350);
                 });
-
-                chapterList.appendChild(chapterItem);
+                chapterList.appendChild(item);
             });
         }
 
-        // 跳转到章节位置
-        function scrollToChapter(startIndex) {
-            // 记录是否正在朗读
+        // 按全文偏移定位朗读单元（章节跳转）
+        function jumpToGlobalOffset(globalOffset) {
             const wasPlaying = isPlaying;
+            if (isPlaying) pausePlayback();
 
-            // 如果正在朗读,先停止
-            if (isPlaying) {
-                speechSynthesis.cancel();
-                isPlaying = false;
-                playBtn.disabled = false;
-                stopBtn.disabled = true;
-                posIndicator.classList.remove('show');
-                clearHighlights();
+            let idx = units.findIndex(u => globalOffset < u.global + (u.end - u.start) && globalOffset >= u.global);
+            if (idx === -1) {
+                idx = units.findIndex(u => u.global >= globalOffset);
             }
+            if (idx === -1) idx = 0;
 
-            // 找到包含该位置的段落
-            const paragraphs = textDisplay.querySelectorAll('p');
-            let targetParagraph = null;
-            let targetSentenceIndex = 0;
+            currentUnitIndex = idx;
+            userSelectedPosition = true;
 
-            for (let i = 0; i < paragraphs.length; i++) {
-                const paragraph = paragraphs[i];
-                const paragraphText = paragraph.textContent;
-
-                // 检查章节标题是否在该段落中
-                if (currentFileContent.indexOf(paragraphText) <= startIndex &&
-                    currentFileContent.indexOf(paragraphText) + paragraphText.length > startIndex) {
-                    targetParagraph = paragraph;
-
-                    // 找到对应的句子索引
-                    targetSentenceIndex = findSentenceIndexFromParagraph(paragraph);
-                    break;
-                }
+            const p = textDisplay.children[units[idx].pIdx];
+            if (p) {
+                textDisplay.querySelectorAll('p').forEach(el => el.classList.remove('selected'));
+                p.classList.add('selected');
+                p.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            updateStatus();
 
-            if (targetParagraph) {
-                // 更新当前句子索引
-                currentSentenceIndex = targetSentenceIndex;
-                // 标记用户手动选择了位置
-                userSelectedPosition = true;
-
-                // 移除之前的选中状态
-                document.querySelectorAll('.text-display p').forEach(p => p.classList.remove('selected'));
-                // 添加选中状态
-                targetParagraph.classList.add('selected');
-
-                targetParagraph.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-
-                // 如果之前正在朗读,自动继续朗读
-                if (wasPlaying) {
-                    setTimeout(() => {
-                        startReading(true);
-                    }, 300); // 短暂延迟确保滚动完成
-                }
-            }
+            if (wasPlaying) setTimeout(() => startReading(true), 300);
         }
 
-        // 显示文本内容
-        function displayTextContent(text) {
-            // 清空现有内容
+        function displayTextContent() {
             textDisplay.innerHTML = '';
-
-            // 将文本按段落分割并显示
-            const paragraphs = text.split(/\n\s*\n/);
-
-            if (paragraphs.length === 0 || (paragraphs.length === 1 && paragraphs[0] === '')) {
-                // 如果没有段落，直接显示整个文本
+            displayParagraphs.forEach((paragraph, pIdx) => {
                 const p = document.createElement('p');
-                p.textContent = text;
+                p.textContent = paragraph;
+                p.dataset.pidx = pIdx;
                 addParagraphClickListener(p);
                 textDisplay.appendChild(p);
-            } else {
-                paragraphs.forEach(paragraph => {
-                    if (paragraph.trim()) {
-                        const p = document.createElement('p');
-                        p.textContent = paragraph;
-                        addParagraphClickListener(p);
-                        textDisplay.appendChild(p);
-                    }
-                });
-            }
-        }
-
-        // 为段落添加点击监听器
-        function addParagraphClickListener(paragraph) {
-            paragraph.addEventListener('click', function () {
-                // 记录是否正在朗读
-                const wasPlaying = isPlaying;
-
-                // 如果正在朗读,先停止
-                if (isPlaying) {
-                    speechSynthesis.cancel();
-                    isPlaying = false;
-                    playBtn.disabled = false;
-                    stopBtn.disabled = true;
-                    posIndicator.classList.remove('show');
-                    clearHighlights();
-                }
-
-                // 移除所有段落的选中状态
-                document.querySelectorAll('.text-display p').forEach(p => p.classList.remove('selected'));
-                // 添加当前段落的选中状态
-                this.classList.add('selected');
-
-                // 找到对应的句子索引
-                const sentenceIndex = findSentenceIndexFromParagraph(this);
-                currentSentenceIndex = sentenceIndex;
-                // 标记用户手动选择了位置
-                userSelectedPosition = true;
-
-                // 显示提示信息
-                showSelectionMessage(sentenceIndex);
-
-                // 如果之前正在朗读,自动继续朗读
-                if (wasPlaying) {
-                    setTimeout(() => {
-                        startReading(true);
-                    }, 300); // 短暂延迟确保UI更新完成
-                }
             });
         }
 
-        // 从段落查找句子索引
-        function findSentenceIndexFromParagraph(paragraph) {
-            const paragraphText = paragraph.textContent.trim();
+        function addParagraphClickListener(paragraph) {
+            // 定位到点击处的句索引并选中
+            const locateAt = (e) => {
+                const pIdx = parseInt(paragraph.dataset.pidx, 10);
 
-            // 由于现在句子和段落使用相同的分割方式,直接精确匹配即可
-            for (let i = 0; i < sentences.length; i++) {
-                // 精确匹配或包含匹配
-                if (sentences[i].trim() === paragraphText ||
-                    sentences[i].includes(paragraphText) ||
-                    paragraphText.includes(sentences[i].trim())) {
-                    return i;
+                let offset = 0;
+                if (document.caretRangeFromPoint) {
+                    const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+                    if (range && range.startContainer.nodeType === Node.TEXT_NODE &&
+                        paragraph.contains(range.startContainer)) {
+                        offset = range.startOffset;
+                    }
                 }
-            }
 
-            // 如果找不到精确匹配,返回0
-            console.warn('未找到匹配的句子索引,使用默认值0');
-            return 0;
+                let idx = units.findIndex(u => u.pIdx === pIdx && offset < u.end && offset >= u.start);
+                if (idx === -1) idx = units.findIndex(u => u.pIdx === pIdx);
+                if (idx === -1) return -1;
+
+                currentUnitIndex = idx;
+                userSelectedPosition = true;
+
+                textDisplay.querySelectorAll('p').forEach(p => p.classList.remove('selected'));
+                paragraph.classList.add('selected');
+
+                updateFocusText();
+                updateStatus();
+                return idx;
+            };
+
+            // 单击：只定位选中；双击则从该句开始播放，此处延迟等待双击判定
+            let clickTimer = null;
+            paragraph.addEventListener('click', function (e) {
+                if (clickTimer) return; // 双击的第二次 click，忽略
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                    const wasPlaying = isPlaying;
+                    if (isPlaying) pausePlayback();
+                    const idx = locateAt(e);
+                    if (idx === -1) return;
+                    toast(`已选择起始位置：第 ${idx + 1} 句`);
+                    if (wasPlaying) setTimeout(() => startReading(true), 300);
+                }, 250);
+            });
+
+            // 双击：从双击处的句子立即开始朗读（进入专注模式）
+            paragraph.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                if (clickTimer) { // 取消单击动作
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                }
+                if (isPlaying) pausePlayback();
+                const idx = locateAt(e);
+                if (idx === -1) return;
+                window.getSelection()?.removeAllRanges();
+                startReading(true);
+                toggleFocusMode(true);
+            });
         }
 
-        // 显示选择提示消息
-        function showSelectionMessage(sentenceIndex) {
-            const message = document.createElement('div');
-            message.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background-color: #4299e1;
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 1000;
-                font-weight: 600;
-                animation: slideIn 0.3s ease-out;
-            `;
-            message.innerHTML = `<i class="fas fa-check-circle"></i> 已选择起始位置: 第 ${sentenceIndex + 1} 句`;
-            document.body.appendChild(message);
-
-            // 2秒后自动消失
-            setTimeout(() => {
-                message.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => message.remove(), 300);
-            }, 2000);
-        }
-
-        // 开始朗读
+        // ---------- 朗读（分块 + 边界跟踪） ----------
         function startReading(skipPositionDetection = false) {
-            // 从当前滚动位置开始，而不是从头开始
-            if (currentSentenceIndex >= sentences.length) {
-                currentSentenceIndex = 0;
-            }
+            if (!units.length) return;
 
-            // 如果没有在播放且没有跳过位置检测，则从当前可见位置开始
-            // 但如果用户手动选择了位置，则不要覆盖
+            if (currentUnitIndex >= units.length) currentUnitIndex = 0;
+
             if (!isPlaying && !skipPositionDetection && !userSelectedPosition) {
-                currentSentenceIndex = getCurrentVisibleSentenceIndex();
+                currentUnitIndex = getCurrentVisibleUnitIndex();
             }
-
-            // 开始朗读后，清除用户选择标志
             userSelectedPosition = false;
 
-            // 更新UI状态
             isPlaying = true;
             playBtn.disabled = true;
             stopBtn.disabled = false;
 
-            // 显示当前位置指示器
-            posIndicator.classList.add('show');
-            updatePositionIndicator();
+            nextChunkFrom = currentUnitIndex;
+            pendingCount = 0;
 
-            // 开始连续朗读流程
-            startContinuousReading();
+            // 先清空引擎残留状态再开播：
+            // Chromium 下 cancel 后立即 speak 经常直接报错，需留出间隔
+            synth.cancel();
+            setTimeout(() => {
+                if (isPlaying) fillQueue();
+            }, 80);
+
+            updateStatus();
         }
 
-        // 连续朗读（优化句子间衔接）
-        function startContinuousReading() {
-            if (!isPlaying || currentSentenceIndex >= sentences.length) {
-                stopReading();
-                return;
-            }
+        // 从 fromIdx 开始合并连续单元为一个块
+        function makeChunk(fromIdx) {
+            let text = '';
+            const starts = [];
+            let end = fromIdx;
 
-            // 设置语音参数
-            utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex]);
+            while (end < units.length) {
+                const t = units[end].text;
+                if (text.length && text.length + 1 + t.length > CHUNK_MAX) break;
+                starts.push(text.length ? text.length + 1 : 0);
+                text += (text.length ? '\n' : '') + t;
+                end++;
+            }
+            return { from: fromIdx, to: end, text, starts };
+        }
+
+        // 保持队列中始终有 QUEUE_AHEAD 个块待播
+        function fillQueue() {
+            while (isPlaying && pendingCount < QUEUE_AHEAD + 1 && nextChunkFrom < units.length) {
+                nextChunkFrom = speakChunk(nextChunkFrom);
+            }
+        }
+
+        function speakChunk(fromIdx, retries = 0) {
+            // 降级模式：每次只读一句（兼容性最好，保证有声音）
+            const chunk = sentenceMode
+                ? { from: fromIdx, to: fromIdx + 1, text: units[fromIdx].text, starts: [0] }
+                : makeChunk(fromIdx);
+
+            const utterance = new SpeechSynthesisUtterance(chunk.text);
             utterance.rate = parseFloat(speedSelect.value);
 
-            // 选择语音 - 确保使用用户选择的语音
-            const selectedVoice = voices.find(voice => voice.voiceURI === voiceSelect.value);
+            const selectedVoice = voices.find(v => v.voiceURI === voiceSelect.value);
             if (selectedVoice) {
                 utterance.voice = selectedVoice;
-            } else {
-                // 如果找不到用户选择的语音，使用默认语音
-                const xiaoxiaoVoice = voices.find(voice =>
-                    voice.name.includes('Microsoft Xiaoxiao Online') ||
-                    voice.name.includes('Xiaoxiao') ||
-                    voice.voiceURI.includes('Microsoft Xiaoxiao Online')
-                );
-                if (xiaoxiaoVoice) {
-                    utterance.voice = xiaoxiaoVoice;
-                } else if (voices.length > 0) {
-                    utterance.voice = voices[0];
-                }
+            } else if (voices.length) {
+                utterance.voice = voices[0];
             }
 
-            // 更新位置指示器（每次开始新句子时更新）
-            updatePositionIndicator();
+            pendingCount++;
+            let lastUnit = -1;
+            let gotBoundary = false;
+            let startTime = 0;
 
-            // 高亮当前朗读的句子
-            highlightCurrentSentence();
-
-            // 语音合成事件处理
-            utterance.onboundary = function (event) {
-                // 在句子边界处预加载下一句，减少停顿
-                if (event.name === 'sentence' && currentSentenceIndex + 1 < sentences.length) {
-                    //preloadNextSentence();
+            // 块内字符偏移 → 单元索引 → 高亮/滚动/状态
+            const locate = (charIndex) => {
+                let k = 0;
+                for (let i = 0; i < chunk.starts.length; i++) {
+                    if (chunk.starts[i] <= charIndex) k = i; else break;
+                }
+                const unitIdx = chunk.from + k;
+                if (unitIdx !== lastUnit) {
+                    lastUnit = unitIdx;
+                    currentUnitIndex = unitIdx;
+                    highlightUnit(units[unitIdx]);
+                    updateFocusText();
+                    updateStatus();
                 }
             };
 
-            utterance.onend = function () {
-                // 清除当前高亮
-                clearHighlights();
+            const stopEstimation = () => {
+                if (estimateTimer) {
+                    clearInterval(estimateTimer);
+                    estimateTimer = null;
+                }
+            };
 
-                // 移动到下一句
-                currentSentenceIndex++;
+            // 无 boundary 事件的环境：按时间估算播放位置，保证高亮仍然前进
+            const startEstimation = () => {
+                stopEstimation();
+                estimateTimer = setInterval(() => {
+                    if (!isPlaying || gotBoundary) { stopEstimation(); return; }
+                    const elapsed = (performance.now() - startTime) / 1000;
+                    const est = elapsed * parseFloat(speedSelect.value) * CPS;
+                    locate(Math.min(est, chunk.text.length - 1));
+                }, 250);
+            };
 
-                if (currentSentenceIndex < sentences.length) {
-                    // 延迟很短的时间后立即开始下一句，减少停顿
-                    setTimeout(() => {
-                        startContinuousReading();
-                    }, 50); // 仅50ms延迟，几乎无感知
+            utterance.onstart = () => {
+                if (!isPlaying) return;
+                startTime = performance.now();
+                locate(0);
+                // 600ms 内没有 boundary 事件则启用估算兜底
+                setTimeout(() => {
+                    if (!gotBoundary && isPlaying && startTime) startEstimation();
+                }, 600);
+            };
+
+            utterance.onboundary = (e) => {
+                if (!isPlaying || typeof e.charIndex !== 'number') return;
+                gotBoundary = true;
+                stopEstimation();
+                locate(e.charIndex);
+            };
+
+            utterance.onend = () => {
+                pendingCount--;
+                stopEstimation();
+                if (!isPlaying) return;
+                if (chunk.to >= units.length) {
+                    stopReading();
+                    toast('朗读完成');
+                    return;
+                }
+                fillQueue();
+            };
+
+            utterance.onerror = (e) => {
+                pendingCount--;
+                stopEstimation();
+                if (e.error === 'canceled' || e.error === 'interrupted') return;
+                console.error('语音合成错误:', e.error, '| 文本开头:', chunk.text.slice(0, 20));
+                if (!isPlaying) return;
+
+                if (!sentenceMode) {
+                    // 分块合成失败：自动降级为逐句播放重试
+                    sentenceMode = true;
+                    nextChunkFrom = fromIdx;
+                    setTimeout(() => { if (isPlaying) fillQueue(); }, 200);
+                } else if (retries < 1) {
+                    // 单句也失败：间隔后重试一次
+                    setTimeout(() => { if (isPlaying) speakChunk(fromIdx, retries + 1); }, 400);
                 } else {
-                    // 朗读完成
-                    currentSentenceIndex = 0;
-                    isPlaying = false;
-                    playBtn.disabled = false;
-                    stopBtn.disabled = true;
-                    posIndicator.classList.remove('show');
+                    pausePlayback();
+                    toast(`语音合成失败（${e.error || '未知原因'}），请更换语音或换用 Edge 浏览器`, true);
                 }
             };
 
-            utterance.onerror = function (event) {
-                console.error('语音合成错误:', event);
-                // 静默处理错误,但不重置currentSentenceIndex
-                // 这样在朗读过程中切换位置时,不会丢失用户选择的位置
-                speechSynthesis.cancel();
-                isPlaying = false;
-                playBtn.disabled = false;
-                stopBtn.disabled = true;
-                posIndicator.classList.remove('show');
-                clearHighlights();
-                stopAutoScroll();
-                // 注意:不重置currentSentenceIndex,保留用户选择的位置
-            };
-
-            // 开始语音合成
-            speechSynthesis.speak(utterance);
+            synth.speak(utterance);
+            return chunk.to;
         }
 
-        // 预加载下一句，减少句子间停顿
-        function preloadNextSentence() {
-            if (currentSentenceIndex + 1 >= sentences.length) return;
-
-            const nextUtterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex + 1]);
-            nextUtterance.rate = parseFloat(speedSelect.value);
-
-            const selectedVoice = voices.find(voice => voice.voiceURI === voiceSelect.value);
-            if (selectedVoice) {
-                nextUtterance.voice = selectedVoice;
-            }
-
-            // 只是预加载，不播放
-            speechSynthesis.cancel(); // 先取消当前播放
-            speechSynthesis.speak(nextUtterance);
-            speechSynthesis.pause(); // 立即暂停，保持预加载状态
-        }
-
-        // 获取当前可见区域的句子索引
-        function getCurrentVisibleSentenceIndex() {
-            // 如果有鼠标选择的文本，从选择的位置开始
-            const selection = window.getSelection();
-            if (selection && selection.toString().trim().length > 0) {
-                // 从选择的文本位置开始
-                return getSentenceIndexFromSelection(selection);
-            }
-
-            // 从当前屏幕中央位置开始
-            const visibleTop = textDisplay.scrollTop;
-            const visibleCenter = visibleTop + textDisplay.clientHeight / 2;
-
-            // 找到当前屏幕中央位置对应的句子
-            const paragraphs = textDisplay.querySelectorAll('p');
-            let currentCharIndex = 0;
-
-            for (let i = 0; i < paragraphs.length; i++) {
-                const paragraph = paragraphs[i];
-                const paragraphTop = paragraph.offsetTop;
-                const paragraphHeight = paragraph.offsetHeight;
-
-                // 检查段落是否在屏幕中央附近
-                if (paragraphTop <= visibleCenter && paragraphTop + paragraphHeight >= visibleCenter) {
-                    // 找到段落中的中央位置
-                    const paragraphText = paragraph.textContent;
-
-                    // 在句子数组中查找包含该段落的句子
-                    for (let j = 0; j < sentences.length; j++) {
-                        if (paragraphText.includes(sentences[j])) {
-                            return j;
-                        }
-                    }
-                }
-            }
-
-            // 如果找不到精确匹配，使用百分比方法作为备选
-            const totalHeight = textDisplay.scrollHeight;
-            const scrollPercentage = visibleCenter / totalHeight;
-            const targetIndex = Math.floor(sentences.length * scrollPercentage);
-            return Math.max(0, Math.min(targetIndex, sentences.length - 1));
-        }
-
-
-
-        // 从选择的文本获取句子索引
-        function getSentenceIndexFromSelection(selection) {
-            const selectedText = selection.toString().trim();
-            if (selectedText.length === 0) return 0;
-
-            // 在句子数组中查找包含选择文本的句子
-            for (let i = 0; i < sentences.length; i++) {
-                if (sentences[i].includes(selectedText)) {
-                    return i;
-                }
-            }
-
-            // 如果找不到精确匹配，找到最接近的句子
-            const anchorNode = selection.anchorNode;
-            if (anchorNode && anchorNode.parentElement) {
-                const paragraph = anchorNode.parentElement;
-                const paragraphText = paragraph.textContent;
-
-                for (let i = 0; i < sentences.length; i++) {
-                    if (paragraphText.includes(sentences[i])) {
-                        return i;
-                    }
-                }
-            }
-
-            return 0;
-        }
-
-        // 停止朗读
-        function stopReading() {
-            speechSynthesis.cancel();
+        // 暂停（保留当前位置，供切换句/章节/语速时内部使用）
+        function pausePlayback() {
             isPlaying = false;
-            currentSentenceIndex = 0;
+            pendingCount = 0;
+            synth.cancel();
             playBtn.disabled = false;
             stopBtn.disabled = true;
-            posIndicator.classList.remove('show');
             clearHighlights();
-            stopAutoScroll();
+            updateStatus();
         }
 
-        // 存档功能
+        // 停止朗读并回到开头（读完或手动停止共用）
+        function stopReading() {
+            isPlaying = false;
+            pendingCount = 0;
+            synth.cancel();
+            currentUnitIndex = 0;
+            playBtn.disabled = false;
+            stopBtn.disabled = true;
+            clearHighlights();
+            textDisplay.querySelectorAll('p').forEach(p => p.classList.remove('selected'));
+            updateStatus();
+        }
+
+        function getCurrentVisibleUnitIndex() {
+            const wrapRect = textWrap.getBoundingClientRect();
+            const center = wrapRect.top + textWrap.clientHeight / 2;
+            const paragraphs = textDisplay.querySelectorAll('p');
+
+            for (let i = 0; i < paragraphs.length; i++) {
+                const r = paragraphs[i].getBoundingClientRect();
+                if (r.top <= center && r.bottom >= center) {
+                    const pIdx = parseInt(paragraphs[i].dataset.pidx, 10);
+                    const idx = units.findIndex(u => u.pIdx === pIdx);
+                    if (idx !== -1) return idx;
+                }
+            }
+
+            const ratio = (textWrap.scrollTop + textWrap.clientHeight / 2) / Math.max(1, textWrap.scrollHeight);
+            return Math.max(0, Math.min(Math.floor(units.length * ratio), units.length - 1));
+        }
+
+        // 高亮当前朗读句（段落内 Range 精确高亮 + 按需滚动）
+        function highlightUnit(unit) {
+            clearHighlights();
+
+            const p = textDisplay.children[unit.pIdx];
+            if (!p) return;
+            p.classList.add('playing');
+
+            let highlightEl = null;
+            const textNode = p.firstChild;
+            if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                try {
+                    const range = document.createRange();
+                    range.setStart(textNode, Math.min(unit.start, textNode.length));
+                    range.setEnd(textNode, Math.min(unit.end, textNode.length));
+                    const span = document.createElement('span');
+                    span.className = 'highlight';
+                    range.surroundContents(span);
+                    highlightEl = span;
+                } catch (e) {
+                    // 高亮失败不影响朗读
+                }
+            }
+
+            ensureVisible(highlightEl || p);
+        }
+
+        // 仅当目标即将滚出舒适区时才滚动，避免频繁跳动
+        function ensureVisible(el) {
+            const wrapRect = textWrap.getBoundingClientRect();
+            const r = el.getBoundingClientRect();
+            const margin = textWrap.clientHeight * 0.3;
+            if (r.top < wrapRect.top + margin * 0.4 || r.bottom > wrapRect.bottom - margin) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function clearHighlights() {
+            textDisplay.querySelectorAll('.highlight').forEach(h => {
+                const parent = h.parentNode;
+                parent.replaceChild(document.createTextNode(h.textContent), h);
+                parent.normalize();
+            });
+            textDisplay.querySelectorAll('p.playing').forEach(p => p.classList.remove('playing'));
+        }
+
+        function getCurrentChapterTitle() {
+            const unit = units[currentUnitIndex];
+            if (!unit) return null;
+            for (let i = chapters.length - 1; i >= 0; i--) {
+                if (unit.global >= chapters[i].startIndex) return chapters[i].title;
+            }
+            return null;
+        }
+
+        function updateStatus() {
+            if (!units.length) {
+                statusText.textContent = '';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+            const chapter = getCurrentChapterTitle();
+            const pos = `第 ${Math.min(currentUnitIndex + 1, units.length)} 句 / 共 ${units.length} 句`;
+            statusText.textContent =
+                (isPlaying ? '正在朗读 · ' : '') +
+                (chapter ? `${chapter} · ` : '') +
+                pos;
+
+            // 翻页按钮状态（有章节时到边界禁用，无章节时始终可用）
+            if (chapters.length) {
+                const cur = getCurrentChapterIdx();
+                prevBtn.disabled = cur <= 0;
+                nextBtn.disabled = cur >= chapters.length - 1;
+            } else {
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+            }
+        }
+
+        // ---------- 存档 / 读档 ----------
         function saveProgress() {
-            if (!currentFileContent || sentences.length === 0) {
-                alert('请先加载文本文件');
+            if (!currentFileContent || !units.length) {
+                toast('请先加载文本文件', true);
                 return;
             }
 
-            const saveData = {
-                fileName: currentFileName.textContent,
-                sentenceIndex: currentSentenceIndex,
-                totalSentences: sentences.length,
+            localStorage.setItem('readingProgress', JSON.stringify({
+                fileName: fileName.textContent,
+                sentenceIndex: currentUnitIndex,
+                totalSentences: units.length,
                 saveTime: new Date().toISOString()
-            };
+            }));
 
-            // 保存到localStorage
-            localStorage.setItem('readingProgress', JSON.stringify(saveData));
-
-            // 显示保存成功提示
-            const currentChapter = getCurrentChapterTitle();
-            const saveMessage = document.createElement('div');
-            saveMessage.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background-color: #48bb78;
-                color: white;
-                padding: 15px 25px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 1000;
-                font-weight: 600;
-                animation: slideIn 0.3s ease-out;
-            `;
-            if (currentChapter) {
-                saveMessage.innerHTML = `<i class="fas fa-check-circle"></i> 存档成功：${currentChapter}`;
-            } else {
-                saveMessage.innerHTML = `<i class="fas fa-check-circle"></i> 存档成功：第 ${currentSentenceIndex + 1} 句 / 共 ${sentences.length} 句`;
-            }
-            document.body.appendChild(saveMessage);
-
-            // 3秒后自动消失
-            setTimeout(() => {
-                saveMessage.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => saveMessage.remove(), 300);
-            }, 3000);
+            const chapter = getCurrentChapterTitle();
+            toast(chapter
+                ? `已存档：${chapter}`
+                : `已存档：第 ${currentUnitIndex + 1} 句 / 共 ${units.length} 句`);
         }
 
-        // 读档功能
         function loadProgress() {
             const savedData = localStorage.getItem('readingProgress');
             if (!savedData) {
-                alert('没有找到存档记录');
+                toast('没有找到存档记录', true);
                 return;
             }
 
             try {
-                const saveData = JSON.parse(savedData);
-
-                // 验证存档数据
-                if (!saveData.sentenceIndex || !saveData.totalSentences) {
-                    alert('存档数据无效');
+                const data = JSON.parse(savedData);
+                if (typeof data.sentenceIndex !== 'number' || !data.totalSentences) {
+                    toast('存档数据无效', true);
                     return;
                 }
 
-                // 检查是否是同一个文件
-                if (saveData.fileName !== currentFileName.textContent) {
-                    const confirmLoad = confirm(`存档文件是：${saveData.fileName}\n当前文件是：${currentFileName.textContent}\n\n确定要读取这个存档吗？`);
-                    if (!confirmLoad) return;
+                if (data.fileName !== fileName.textContent) {
+                    toast(`存档来自：${data.fileName}，已按当前文本读取`);
                 }
 
-                // 设置当前句子索引
-                currentSentenceIndex = saveData.sentenceIndex;
+                currentUnitIndex = Math.max(0, Math.min(data.sentenceIndex, units.length - 1));
+                userSelectedPosition = true;
 
-                // 确保索引在有效范围内
-                if (currentSentenceIndex < 0) currentSentenceIndex = 0;
-                if (currentSentenceIndex >= sentences.length) currentSentenceIndex = sentences.length - 1;
-
-                // 滚动到对应的句子位置
-                if (sentences[currentSentenceIndex]) {
-                    const targetSentence = sentences[currentSentenceIndex];
-                    scrollToSentence(targetSentence);
+                const unit = units[currentUnitIndex];
+                if (unit) {
+                    const p = textDisplay.children[unit.pIdx];
+                    if (p) p.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
 
-                // 显示加载成功提示
-                const currentChapter = getCurrentChapterTitle();
-                const loadMessage = document.createElement('div');
-                loadMessage.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background-color: #4299e1;
-                    color: white;
-                    padding: 15px 25px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                    z-index: 1000;
-                    font-weight: 600;
-                    animation: slideIn 0.3s ease-out;
-                `;
-                if (currentChapter) {
-                    loadMessage.innerHTML = `<i class="fas fa-check-circle"></i> 读档成功：${currentChapter}`;
-                } else {
-                    loadMessage.innerHTML = `<i class="fas fa-check-circle"></i> 读档成功：第 ${currentSentenceIndex + 1} 句 / 共 ${sentences.length} 句`;
-                }
-                document.body.appendChild(loadMessage);
+                const chapter = getCurrentChapterTitle();
+                toast(chapter
+                    ? `读档成功：${chapter}`
+                    : `读档成功：第 ${currentUnitIndex + 1} 句 / 共 ${units.length} 句`);
 
-                // 3秒后自动消失
-                setTimeout(() => {
-                    loadMessage.style.animation = 'slideOut 0.3s ease-out';
-                    setTimeout(() => loadMessage.remove(), 300);
-                }, 3000);
-
-                // 立即从存档位置开始播放（跳过位置检测，使用已设置的currentSentenceIndex）
                 startReading(true);
-
-            } catch (error) {
-                console.error('读取存档失败:', error);
-                alert('读取存档失败，存档数据可能已损坏');
+            } catch (e) {
+                console.error('读取存档失败:', e);
+                toast('读取存档失败，存档数据可能已损坏', true);
             }
         }
 
-        // 滚动到指定句子
-        function scrollToSentence(sentenceText) {
-            const paragraphs = textDisplay.querySelectorAll('p');
+        // ---------- 专注模式 ----------
+        // 播放即进入：只显示当前朗读的句子，居中呈现；仅 Esc 退出
+        function updateFocusText() {
+            if (!focusMode.classList.contains('open')) return;
+            const unit = units[currentUnitIndex];
+            focusText.textContent = unit ? unit.text.trim() : '';
+        }
 
-            for (let i = 0; i < paragraphs.length; i++) {
-                const paragraph = paragraphs[i];
-                if (paragraph.textContent.includes(sentenceText)) {
-                    paragraph.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    });
-                    break;
+        function toggleFocusMode(force) {
+            const open = typeof force === 'boolean' ? force : !focusMode.classList.contains('open');
+            if (open && !units.length) return;
+            focusMode.classList.toggle('open', open);
+            if (open) updateFocusText();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!focusMode.classList.contains('open')) return;
+            if (e.key === 'Escape') {
+                toggleFocusMode(false);
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                if (isPlaying) {
+                    pausePlayback(); // 暂停：保留当前句位置
+                } else {
+                    startReading(true); // 恢复：从暂停的句子继续（true=不做位置检测）
                 }
-            }
-        }
-
-        // 高亮当前朗读的句子
-        function highlightCurrentSentence() {
-            clearHighlights();
-
-            // 获取当前句子
-            const currentSentence = sentences[currentSentenceIndex];
-            if (!currentSentence) return;
-
-            // 在文本显示区域查找并高亮当前句子
-            const paragraphs = textDisplay.querySelectorAll('p');
-
-            for (let i = 0; i < paragraphs.length; i++) {
-                const paragraph = paragraphs[i];
-                const paragraphText = paragraph.textContent;
-                const sentenceIndex = paragraphText.indexOf(currentSentence);
-
-                if (sentenceIndex !== -1) {
-                    // 创建范围并高亮
-                    const textNodes = getTextNodes(paragraph);
-                    let currentIndex = 0;
-
-                    for (let j = 0; j < textNodes.length; j++) {
-                        const textNode = textNodes[j];
-                        const nodeLength = textNode.textContent.length;
-
-                        if (currentIndex <= sentenceIndex && currentIndex + nodeLength > sentenceIndex) {
-                            const startOffset = sentenceIndex - currentIndex;
-                            const endOffset = Math.min(startOffset + currentSentence.length, nodeLength);
-
-                            const range = document.createRange();
-                            range.setStart(textNode, startOffset);
-                            range.setEnd(textNode, endOffset);
-
-                            const highlightSpan = document.createElement('span');
-                            highlightSpan.className = 'highlight';
-
-                            range.surroundContents(highlightSpan);
-                            break;
-                        }
-
-                        currentIndex += nodeLength;
-                    }
-
-                    // 滚动到高亮区域
-                    const highlightElement = paragraph.querySelector('.highlight');
-                    if (highlightElement) {
-                        highlightElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-                    }
-
-                    break;
+                updateFocusText();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (currentUnitIndex < units.length - 1) {
+                    currentUnitIndex++;
+                    userSelectedPosition = true;
+                    if (isPlaying) { pausePlayback(); setTimeout(() => startReading(true), 100); }
+                    updateFocusText();
+                    updateStatus();
                 }
-            }
-        }
-
-        // 获取元素中的所有文本节点
-        function getTextNodes(element) {
-            const textNodes = [];
-            const walker = document.createTreeWalker(
-                element,
-                NodeFilter.SHOW_TEXT,
-                null,
-                false
-            );
-
-            let node;
-            while (node = walker.nextNode()) {
-                textNodes.push(node);
-            }
-
-            return textNodes;
-        }
-
-        // 清除所有高亮
-        function clearHighlights() {
-            const highlights = textDisplay.querySelectorAll('.highlight');
-            highlights.forEach(highlight => {
-                const parent = highlight.parentNode;
-                parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
-                parent.normalize();
-            });
-        }
-
-        // 更新位置指示器
-        function updatePositionIndicator() {
-            const currentChapter = getCurrentChapterTitle();
-            if (currentChapter) {
-                currentPosText.textContent = ` ${currentChapter}`;
-            } else {
-                currentPosText.textContent = `第 ${currentSentenceIndex + 1} 句 / 共 ${sentences.length} 句`;
-            }
-        }
-
-        // 获取当前句子所属的章节标题
-        function getCurrentChapterTitle() {
-            if (!sentences[currentSentenceIndex]) return null;
-
-            // 获取当前句子的文本
-            const currentSentenceText = sentences[currentSentenceIndex].trim();
-            // 在原始文件中查找该文本的位置
-            const sentenceIndexInFile = currentFileContent.indexOf(currentSentenceText);
-
-            if (sentenceIndexInFile === -1) return null;
-
-            // 查找包含该位置的章节
-            for (let i = chapters.length - 1; i >= 0; i--) {
-                const chapter = chapters[i];
-                if (sentenceIndexInFile >= chapter.startIndex) {
-                    return chapter.title;
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (currentUnitIndex > 0) {
+                    currentUnitIndex--;
+                    userSelectedPosition = true;
+                    if (isPlaying) { pausePlayback(); setTimeout(() => startReading(true), 100); }
+                    updateFocusText();
+                    updateStatus();
                 }
+            } else if (e.key === 'ArrowDown') { // 下一章
+                e.preventDefault();
+                flipPage(1);
+                setTimeout(updateFocusText, 350);
+            } else if (e.key === 'ArrowUp') { // 上一章
+                e.preventDefault();
+                flipPage(-1);
+                setTimeout(updateFocusText, 350);
             }
+        });
 
-            return null;
-        }
-
-        // 开始自动滚动
-        function startAutoScroll() {
-            stopAutoScroll();
-
-            // 每100毫秒滚动一点点，实现平滑滚动
-            autoScrollInterval = setInterval(() => {
-                // 轻微向下滚动
-                textDisplay.scrollTop += 1;
-            }, 100);
-        }
-
-        // 停止自动滚动
-        function stopAutoScroll() {
-            if (autoScrollInterval) {
-                clearInterval(autoScrollInterval);
-                autoScrollInterval = null;
-            }
-        }
-
-        // 事件监听
-        playBtn.addEventListener('click', startReading);
+        // ---------- 事件 ----------
+        playBtn.addEventListener('click', () => {
+            startReading();
+            toggleFocusMode(true); // 播放即进入专注模式
+        });
         stopBtn.addEventListener('click', stopReading);
+        saveBtn.addEventListener('click', saveProgress);
+        loadBtn.addEventListener('click', loadProgress);
+
+        // 边缘滑出：右=章节目录，顶=工具栏
+        // 鼠标在边缘悬停 0.5 秒才唤出（防误触）；用 mousemove 坐标判断，不受层叠遮挡影响
+        const HOVER_DELAY = 500;
+        const EDGE_RIGHT = 80; // 右侧章节目录触发宽度（px）
+        const EDGE_TOP = 24;   // 顶部工具栏触发高度（px）
+        let edgeTimer = null;
+
+        document.addEventListener('mousemove', e => {
+            if (readerView.hidden) return;
+
+            const nearRight = e.clientX >= window.innerWidth - EDGE_RIGHT
+                && e.clientX <= window.innerWidth;
+            const nearTop = e.clientY >= 0 && e.clientY <= EDGE_TOP;
+            const zone = (!chapterPanel.classList.contains('open') && nearRight) ? chapterPanel
+                : (!toolbar.classList.contains('open') && nearTop) ? toolbar
+                    : null;
+
+            if (zone) {
+                if (!edgeTimer) {
+                    const z = zone;
+                    edgeTimer = setTimeout(() => {
+                        edgeTimer = null;
+                        z.classList.add('open');
+                    }, HOVER_DELAY);
+                }
+            } else if (edgeTimer) { // 移出边缘，取消待唤出
+                clearTimeout(edgeTimer);
+                edgeTimer = null;
+            }
+        });
+
+        // 鼠标一旦离开页面区域（移到浏览器标签栏/书签栏/窗口外），
+        // 立即取消待唤出并收起所有面板——页面外的鼠标与页面无关
+        document.addEventListener('mouseout', e => {
+            if (e.relatedTarget) return; // 仍在文档内元素间移动
+            clearTimeout(edgeTimer);
+            edgeTimer = null;
+            chapterPanel.classList.remove('open');
+            toolbar.classList.remove('open');
+        });
+
+        // 鼠标离开面板后收回
+        [chapterPanel, toolbar].forEach(panel => {
+            panel.addEventListener('mouseleave', () => {
+                setTimeout(() => panel.classList.remove('open'), 150);
+            });
+        });
+
+        // 上一章 / 下一章：有章节按章节跳，无章节按屏翻页
+        function getCurrentChapterIdx() {
+            const unit = units[currentUnitIndex];
+            if (!unit || !chapters.length) return -1;
+            let idx = 0;
+            for (let i = 0; i < chapters.length; i++) {
+                if (unit.global >= chapters[i].startIndex) idx = i; else break;
+            }
+            return idx;
+        }
+
+        function flipPage(direction) {
+            if (!units.length) return;
+            if (chapters.length) {
+                const cur = getCurrentChapterIdx();
+                const target = direction > 0
+                    ? (cur < 0 ? 0 : Math.min(cur + 1, chapters.length - 1))
+                    : Math.max(cur - 1, 0);
+                if (target === cur && direction > 0 && cur === chapters.length - 1) {
+                    toast('已经是最后一章');
+                    return;
+                }
+                jumpToGlobalOffset(chapters[target].startIndex);
+            } else {
+                textWrap.scrollBy({
+                    top: direction * textWrap.clientHeight * 0.9,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        prevBtn.addEventListener('click', () => flipPage(-1));
+        nextBtn.addEventListener('click', () => flipPage(1));
+
+        reimportBtn.addEventListener('click', () => {
+            stopReading();
+            toggleFocusMode(false);
+            chapterPanel.classList.remove('open');
+            toolbar.classList.remove('open');
+            readerView.hidden = true;
+            importView.hidden = false;
+            fileInput.value = '';
+        });
 
         speedSelect.addEventListener('change', () => {
-            // 检查是否正在朗读
             if (isPlaying) {
-                speechSynthesis.cancel();
-                isPlaying = false;
-                // 使用skipPositionDetection=true保留当前位置
-                setTimeout(() => {
-                    startReading(true);
-                }, 100); // 短暂延迟确保cancel完成
+                pausePlayback();
+                setTimeout(() => startReading(true), 100);
             }
         });
 
         voiceSelect.addEventListener('change', () => {
-            // 保存当前选择的语音到本地存储，防止重置
             localStorage.setItem('selectedVoice', voiceSelect.value);
-
-            // 检查是否正在朗读
             if (isPlaying) {
-                speechSynthesis.cancel();
-                isPlaying = false;
-                // 使用skipPositionDetection=true保留当前位置
-                setTimeout(() => {
-                    startReading(true);
-                }, 100); // 短暂延迟确保cancel完成
+                pausePlayback();
+                setTimeout(() => startReading(true), 100);
             }
         });
 
-        // 存档按钮事件
-        saveBtn.addEventListener('click', saveProgress);
-
-        // 读档按钮事件
-        loadBtn.addEventListener('click', loadProgress);
-
-        // 页面卸载前停止语音
         window.addEventListener('beforeunload', () => {
-            if (speechSynthesis.speaking) {
-                speechSynthesis.cancel();
-            }
+            if (synth.speaking) synth.cancel();
         });
-
-
 
         // 初始化
         loadVoices();
-
-        // 示例文本（如果用户没有上传文件，可以提供一个示例）
-        const sampleText = `欢迎使用TXT在线阅读器！
-
-这是一个示例文本，您可以点击左侧的"导入TXT文件"区域上传您自己的文本文件。
-
-GitHub：http://github.com/IIIStudio/TXTMSTTS
-
-CNB：https://cnb.cool/IIIStudio/HTML/MSTTS
-
-测试网站：https://IIIStudio.github.io/TXTMSTTS/
-
-功能特点：
-
-1. 智能编码检测，解决中文乱码问题
-
-2. 支持导入本地TXT文件
-
-3. 文字转语音朗读功能
-
-4. 自动滚动和高亮当前朗读内容
-
-5. 可调节朗读速度和选择不同语音
-
-常见中文编码问题解决方案：
-
-• 如果文本显示为"�����������蹫˾������"等乱码，请尝试选择"GBK"编码
-
-• 如果文本显示为繁体中文乱码，请尝试选择"Big5"编码
-
-• 现代文本文件通常使用"UTF-8"编码
-
-请上传您的文本文件开始体验吧！`;
-
-        // 显示示例文本
-        displayTextContent(sampleText);
     </script>
 </body>
 
