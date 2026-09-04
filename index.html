@@ -66,6 +66,7 @@
 
         /* ---------- 状态 A：导入页 ---------- */
         #importView {
+            position: relative;
             height: 100vh;
             height: 100dvh;
             display: flex;
@@ -110,6 +111,43 @@
             font-size: 13px;
             letter-spacing: .15em;
             color: var(--gray-2);
+        }
+
+        /* 首页右上角外链：浅色、弱化，不干扰主标题 */
+        .import-links {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            letter-spacing: .05em;
+        }
+
+        .import-links a {
+            color: #a6a6a6;
+            text-decoration: none;
+            padding-bottom: 2px;
+            border-bottom: 1px solid transparent;
+            transition: color .2s ease, border-color .2s ease;
+        }
+
+        .import-links a:hover {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .import-links .sep {
+            color: #cccccc;
+        }
+
+        @media (max-width: 640px) {
+            .import-links {
+                top: 12px;
+                right: 14px;
+            }
         }
 
         /* ---------- 状态 B：阅读页 ---------- */
@@ -406,6 +444,11 @@
             <p class="hint">拖入或点击导入 TXT</p>
             <p class="formats">.TXT&ensp;.MD&ensp;.JSON</p>
         </div>
+        <nav class="import-links">
+            <a href="http://github.com/IIIStudio/MSTTS" target="_blank" rel="noopener">GitHub</a>
+            <span class="sep">·</span>
+            <a href="https://cnb.cool/IIIStudio/HTML/MSTTS" target="_blank" rel="noopener">CNB</a>
+        </nav>
         <input type="file" id="fileInput" accept=".txt,.md,.json,.html,.css,.js,.xml,.csv" hidden>
     </section>
 
@@ -573,6 +616,9 @@
 
         // ---------- 导入 ----------
         importView.addEventListener('click', () => fileInput.click());
+
+        // 首页外链不触发文件选择
+        document.querySelector('.import-links').addEventListener('click', e => e.stopPropagation());
 
         ['dragenter', 'dragover'].forEach(ev =>
             importView.addEventListener(ev, e => {
