@@ -765,8 +765,28 @@
             return out;
         }
 
+        // 统一换行符：\r\n、\r、U+2028/U+2029 全部归一为 \n
+        function normalizeText(text) {
+            return text.replace(/\r\n?/g, '\n').replace(/[\u2028\u2029]/g, '\n');
+        }
+
+        // 分段：优先空行分段；没有空行时按单换行分段；
+        // 整篇无换行时按行首全角缩进（　　）切分，避免全篇挤成一段
+        function splitParagraphs(text) {
+            let parts;
+            if (/\n[ \t\u3000]*\n/.test(text)) {
+                parts = text.split(/\n[ \t\u3000]*\n+/);
+            } else if (text.includes('\n')) {
+                parts = text.split('\n');
+            } else {
+                parts = text.split(/(?=\u3000\u3000)/);
+            }
+            return parts.map(p => p.replace(/^[ \t\u3000]+/, '').trimEnd()).filter(p => p.trim());
+        }
+
         function processTextContent(text) {
-            displayParagraphs = text.split(/\n\s*\n/).filter(p => p.trim());
+            text = normalizeText(text);
+            displayParagraphs = splitParagraphs(text);
             units = [];
 
             let searchFrom = 0;
